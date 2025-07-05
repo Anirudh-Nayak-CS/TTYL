@@ -5,14 +5,16 @@ HEADER=1024
 PORT=5050
 FORMAT="utf-8"
 DISCONNECT_MESSAGE="/quit"
-WELCOME_MESSAGE=(
-  "*******************************************"
-   "\n"
-   "Commands \n"
-   "/quit -> to disconnect from server \n"
-  "*******************************************"
-)
+WELCOME_MESSAGE = (
+    "╔════════════════════════════════════════════════╗\n"
+    "║                Welcome to TTYL                 ║\n"
+    "╠════════════════════════════════════════════════╣\n"
+    "║ Commands:                                      ║\n"
+    "║ /quit               → Disconnect from server   ║\n"
+    "║ /msg <username> msg → Privately message a user ║\n"
+    "╚════════════════════════════════════════════════╝"
 
+)
 
 
 clients={}
@@ -32,6 +34,33 @@ def broadcast(message,currclientusername):
        
        conn.send(final_message_length)
        conn.send(final_message)
+
+def msgPrivately(message,currclientusername):
+  msg_parts=message.split(' ',2)
+  
+  connection_sender=clients[currclientusername]
+  if len(msg_parts)<3:
+    connection_sender.send("[SERVER] Invalid format.Use /msg <username> msg".encode(FORMAT))
+  user=msg_parts[1]
+  actualmessage=msg_parts[2]
+  if user not in clients:
+    connection_sender.send("[SERVER] User is not online".encode(FORMAT))
+  else:  
+   connection_receiver=clients[user]
+   final_message=f"[{currclientusername}] {actualmessage}".encode(FORMAT)
+   final_message_length=len(final_message)
+   final_message_length=str(final_message_length).encode(FORMAT)
+   final_message_length+=b' '*(HEADER-len(final_message_length))
+   connection_receiver.send(final_message_length)
+   connection_receiver.send(final_message) 
+   
+   
+   confirmation_message=f"Your message was sent to {user} successfully"
+   confirmation_message_length=len(confirmation_message)
+   confirmation_message_length=str(confirmation_message_length).encode(FORMAT)
+   confirmation_message_length+=b' '*(HEADER-len(confirmation_message_length))  
+   connection_sender.send(confirmation_message_length)
+   connection_sender.send(confirmation_message.encode(FORMAT))
 
 def handleClient(conn,addr):
   print(f"[NEW-CONNECTION] {addr} connected")
@@ -71,7 +100,10 @@ def handleClient(conn,addr):
         print(f"[CLIENT {username}] disconnected ")
         break 
      print(f"{addr}[{username}]{msg}")
-     broadcast(msg,username)
+     if "/msg " in msg:
+       msgPrivately(msg,username) 
+     else:
+      broadcast(msg,username)
      
      
   conn.close()
