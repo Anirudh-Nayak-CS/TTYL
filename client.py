@@ -1,4 +1,5 @@
 import socket
+import threading
 
 HEADER=1024
 PORT=5050
@@ -10,7 +11,17 @@ DISCONNECT_MESSAGE="/quit"
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
 sock.connect(ADDR)
-
+def receivemessages():
+ while True:
+   msg_length=sock.recv(HEADER).decode(FORMAT)
+   if msg_length:
+    msg_length=int(msg_length)
+    msg=sock.recv(msg_length).decode(FORMAT)
+    print(f"\n{msg}")
+    
+    print("Enter your message -> ", end="",flush=True) 
+   else:
+     break
 
 def send(msg):
   message=msg.encode(FORMAT)
@@ -19,7 +30,7 @@ def send(msg):
   send_length+=b' '*(HEADER-len(send_length))
   sock.send(send_length)
   sock.send(message)
-  print(sock.recv(2048).decode(FORMAT))
+  
 
 while True:
 
@@ -42,8 +53,10 @@ welcomemsg_length=sock.recv(HEADER).decode(FORMAT)
 welcomemsg_length=int(welcomemsg_length)
 welcomemsg=sock.recv(welcomemsg_length).decode(FORMAT)
 print(welcomemsg)
+thread=threading.Thread(target=receivemessages)
+thread.start()
 while True:
- message=input("\nEnter your message -> ")
+ message=input("\nEnter a message -> ")
  if message=="/quit":
    send(DISCONNECT_MESSAGE)
    break

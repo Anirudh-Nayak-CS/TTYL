@@ -15,12 +15,23 @@ WELCOME_MESSAGE=(
 
 
 
-usernames=[]
+clients={}
+
 SERVER=socket.gethostbyname(socket.gethostname())
 ADDR=(SERVER,PORT)
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind(ADDR)
 
+def broadcast(message,currclientusername):
+  final_message=f"[{currclientusername}] {message}".encode(FORMAT)
+  final_message_length=len(final_message)
+  final_message_length=str(final_message_length).encode(FORMAT)
+  final_message_length+=b' '*(HEADER-len(final_message_length))
+  for username,conn in clients.items():
+    if username!=currclientusername:
+       
+       conn.send(final_message_length)
+       conn.send(final_message)
 
 def handleClient(conn,addr):
   print(f"[NEW-CONNECTION] {addr} connected")
@@ -33,12 +44,12 @@ def handleClient(conn,addr):
       username_length=int(username_length)
       username=conn.recv(username_length).decode(FORMAT)
 
-      if username in usernames:
+      if username in clients:
        conn.send("[SERVER] Username already exists. Please enter another username.".encode(FORMAT))
       
       else:
        conn.send(f"[SERVER] Username accepted. Welcome! {username}".encode(FORMAT))
-       usernames.append(username)
+       clients[username]=conn
        break
 
     welcome_msg=WELCOME_MESSAGE.encode('utf8')
@@ -56,11 +67,12 @@ def handleClient(conn,addr):
 
      if msg==DISCONNECT_MESSAGE:
         connected=False
-        usernames.remove(username) 
+        del clients[username] 
         print(f"[CLIENT {username}] disconnected ")
         break 
-     print(f"[CLIENT {username}]{msg}")
-     conn.send("\n[SERVER] Msg received ".encode(FORMAT))
+     print(f"{addr}[{username}]{msg}")
+     broadcast(msg,username)
+     
      
   conn.close()
 
