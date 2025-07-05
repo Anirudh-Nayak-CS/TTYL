@@ -4,8 +4,15 @@ import threading
 HEADER=1024
 PORT=5050
 FORMAT="utf-8"
-DISCONNECT_MESSAGE="!DISCONNECTED"
+DISCONNECT_MESSAGE="/quit"
+WELCOME_MESSAGE=(
+   "Commands \n"
+   "/quit -> to disconnect from server"
+)
 
+
+
+usernames=[]
 SERVER=socket.gethostbyname(socket.gethostname())
 ADDR=(SERVER,PORT)
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -16,14 +23,36 @@ def handleClient(conn,addr):
   print(f"[NEW-CONNECTION] {addr} connected")
   connected=True
   while connected:
+   
+    username_length=conn.recv(HEADER).decode(FORMAT)
+
+    if username_length:
+     username_length=int(username_length)
+     username=conn.recv(username_length).decode(FORMAT)
+     while username in usernames:
+       conn.send("Username already exists. Please enter another username.").encode(FORMAT)
+    
+    usernames.append(username)
+
+    welcome_msg=WELCOME_MESSAGE.encode('utf8')
+    welcome_length=len(welcome_msg)
+    welcome_length=str(welcome_length).encode('utf-8')
+    welcome_length+=b' '*(HEADER-len(welcome_length))
+    conn.send(welcome_length)
+    conn.send(welcome_msg)
+
     msg_length=conn.recv(HEADER).decode(FORMAT)
+
     if msg_length:
-     msg_length=int(msg_length)
-     msg=conn.recv(msg_length).decode(FORMAT)
-     if msg==DISCONNECT_MESSAGE:
-      connected=False
-     print(f"[{addr}]{msg}")
-     conn.send("Msg received ".encode(FORMAT))
+       msg_length=int(msg_length)
+       msg=conn.recv(msg_length).decode(FORMAT)
+
+    if msg==DISCONNECT_MESSAGE:
+       connected=False
+       usernames.remove(username)  
+    print(f"[{addr}]{msg}")
+    conn.send("Msg received ".encode(FORMAT))
+     
   conn.close()
 
 def start():
