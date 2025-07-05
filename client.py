@@ -5,20 +5,14 @@ PORT=5050
 FORMAT="utf-8"
 SERVER="127.0.1.1"
 ADDR=(SERVER,PORT)
-
+DISCONNECT_MESSAGE="/quit"
 
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
 sock.connect(ADDR)
 
 
-def send(username,msg):
-  user=username.encode(FORMAT)
-  user_length=len(user)
-  send_user_length=str(user_length).encode(FORMAT)
-  send_user_length+=b' '*(HEADER-len(send_user_length))
-  sock.send(send_user_length)
-  sock.send(user)
+def send(msg):
   message=msg.encode(FORMAT)
   msg_length=len(message)
   send_length=str(msg_length).encode(FORMAT)  
@@ -28,13 +22,30 @@ def send(username,msg):
   print(sock.recv(2048).decode(FORMAT))
 
 while True:
+
+ username=input("Enter your username -> ")
+ user=username.encode(FORMAT)
+ user_length=len(user)
+ send_user_length=str(user_length).encode(FORMAT)
+ send_user_length+=b' '*(HEADER-len(send_user_length))
+ sock.send(send_user_length)
+ sock.send(user)
+ username_existence_msg=sock.recv(1024).decode(FORMAT)
+ if "Username already exists" in username_existence_msg:
+    print(username_existence_msg)
+    continue
+ else:
+  print(username_existence_msg)
+  break
  
- username=input("Enter your username")
- print(f"Welcome {username}")
- welcomemsg_length=sock.recv(HEADER).decode(FORMAT)
- welcomemsg_length=int(welcomemsg_length)
- welcomemsg=sock.recv(welcomemsg_length).decode(FORMAT)
- print(welcomemsg)
- message=input("Enter your message")
- send(username,message)
+welcomemsg_length=sock.recv(HEADER).decode(FORMAT)
+welcomemsg_length=int(welcomemsg_length)
+welcomemsg=sock.recv(welcomemsg_length).decode(FORMAT)
+print(welcomemsg)
+while True:
+ message=input("\nEnter your message -> ")
+ if message=="/quit":
+   send(DISCONNECT_MESSAGE)
+   break
+ send(message)
  
