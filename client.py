@@ -4,10 +4,15 @@ import threading
 # --- Configuration ---
 SERVER_IP = '127.0.0.1'  # Change to your server's IP
 SERVER_PORT = 5555       # Must match server's port
+DISCONNECT_MESSAGE="/quit"
 
-# --- Connecting to server ---
+
+
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((SERVER_IP, SERVER_PORT))
+
+username = input("Enter your username: ")
+client.send(username.encode('utf-8'))
 
 print("Connected to server. You can start chatting!\n")
 
@@ -17,7 +22,7 @@ def receive_messages():
         try:
             message = client.recv(1024).decode('utf-8')
             if message:
-                print(f"\n[Server]: {message}")
+                print(f"\n{message}")
             else:
                 print("\nDisconnected from server.")
                 break
@@ -29,7 +34,7 @@ def receive_messages():
 def send_messages():
     while True:
         message = input()
-        if message.lower() == 'exit':
+        if message== DISCONNECT_MESSAGE:
             client.close()
             break
         try:
