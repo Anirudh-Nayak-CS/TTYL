@@ -12,6 +12,7 @@ WELCOME_MESSAGE = (
     "║ Commands:                                      ║\n"
     "║ /quit               → Disconnect from server   ║\n"
     "║ /msg <username> msg → Privately message a user ║\n"
+    "║ /users              → List of users online     ║\n"
     "╚════════════════════════════════════════════════╝"
 
 )
@@ -24,6 +25,7 @@ ADDR=(SERVER,PORT)
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind(ADDR)
 
+
 def broadcast(message,currclientusername):
   final_message=f"[{currclientusername}] {message}".encode(FORMAT)
   final_message_length=len(final_message)
@@ -34,6 +36,15 @@ def broadcast(message,currclientusername):
        
        conn.send(final_message_length)
        conn.send(final_message)
+
+def listallusers(conn):
+  online_users=', '.join(clients.keys())
+  final_message=f"[SERVER] Online users -> {online_users}".encode(FORMAT)
+  final_message_length=len(final_message)
+  final_message_length=str(final_message_length).encode(FORMAT)
+  final_message_length+=b' '*(HEADER-len(final_message_length))
+  conn.send(final_message_length)
+  conn.send(final_message)
 
 def msgPrivately(message,currclientusername):
   msg_parts=message.split(' ',2)
@@ -47,7 +58,7 @@ def msgPrivately(message,currclientusername):
     connection_sender.send("[SERVER] User is not online".encode(FORMAT))
   else:  
    connection_receiver=clients[user]
-   final_message=f"[{currclientusername}] {actualmessage}".encode(FORMAT)
+   final_message=f"[ Private message from {currclientusername}] {actualmessage}".encode(FORMAT)
    final_message_length=len(final_message)
    final_message_length=str(final_message_length).encode(FORMAT)
    final_message_length+=b' '*(HEADER-len(final_message_length))
@@ -62,8 +73,9 @@ def msgPrivately(message,currclientusername):
    connection_sender.send(confirmation_message_length)
    connection_sender.send(confirmation_message.encode(FORMAT))
 
+
 def handleClient(conn,addr):
-  print(f"[NEW-CONNECTION] {addr} connected")
+ 
   connected=True
   while connected:
     while True:
@@ -80,7 +92,8 @@ def handleClient(conn,addr):
        conn.send(f"[SERVER] Username accepted. Welcome! {username}".encode(FORMAT))
        clients[username]=conn
        break
-
+    print(f"[NEW-CONNECTION] {username} connected")
+    broadcast(f"🟢 {username} joined the chat.",username)
     welcome_msg=WELCOME_MESSAGE.encode('utf8')
     welcome_length=len(welcome_msg)
     welcome_length=str(welcome_length).encode('utf-8')
@@ -98,10 +111,13 @@ def handleClient(conn,addr):
         connected=False
         del clients[username] 
         print(f"[CLIENT {username}] disconnected ")
+        broadcast(f" 🔴 {username} left the chat. ",username)
         break 
      print(f"{addr}[{username}]{msg}")
      if "/msg " in msg:
-       msgPrivately(msg,username) 
+       msgPrivately(msg,username)
+     elif "/users" in msg:
+       listallusers(conn) 
      else:
       broadcast(msg,username)
      

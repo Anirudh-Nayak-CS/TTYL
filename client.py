@@ -19,7 +19,6 @@ def receivemessages():
     msg=sock.recv(msg_length).decode(FORMAT)
     print(f"\n{msg}")
     
-    print("Enter your message -> ", end="",flush=True) 
    else:
      break
 
@@ -56,7 +55,7 @@ print(welcomemsg)
 thread=threading.Thread(target=receivemessages)
 thread.start()
 while True:
- message=input("\nEnter a message -> ")
+ message=input()
  if message=="/quit":
    send(DISCONNECT_MESSAGE)
    break
