@@ -5,6 +5,7 @@ import threading
 HOST = '0.0.0.0'
 PORT = 5555
 PVT_MSG="/msg"
+REQ_USERNAMES = ["/usernames", "/username"]
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
@@ -23,6 +24,12 @@ def privatemsg(message, sender_client, receiver_client):
         if(client==receiver_client):
             msg=f"[PRIVATE MESSAGE FROM {usernames[sender_client]}]:{message}"
             client.send(msg.encode('utf-8'))
+
+def requsername(req_client):
+    msg=""
+    for client in clients:
+        msg+=f"{usernames[client]} "
+    req_client.send(msg.encode('utf-8'))
 
 def handle_client(client):
     try:
@@ -59,6 +66,11 @@ def handle_client(client):
                 except ValueError:
                     client.send("[SERVER]: Invalid private message format. Use /msg username message".encode('utf-8'))
                 continue
+
+            if msg_decoded in REQ_USERNAMES:
+                requsername(client)
+                continue
+
 
             broadcast(f"[{username}]: {msg_decoded}", client)
             
