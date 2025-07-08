@@ -30,6 +30,7 @@ def sendmessages(message,sock):
 def receivemessages():
  global stop_thread
  while True:
+ 
    if stop_thread==True:
     break
    rawdata=sock.recv(HEADER)       
@@ -43,8 +44,9 @@ def receivemessages():
    if msg==DISCONNECT_MESSAGE:
     stop_thread=True
     sock.close()
-
-   print(f"\n{msg}")
+    exit()
+   else:
+    print(f"\n{msg}")
    
 
 def send(msg):
@@ -103,22 +105,26 @@ print(welcomemsg)
 thread=threading.Thread(target=receivemessages)
 thread.start()
 while True:
- message=input()
- if message=="/quit":
-   send(DISCONNECT_MESSAGE)
-   stop_thread=True
-   sock.close()
-   break
- elif "/kick" in message:
+ try:
+  message=input()
+  if message=="/quit":
+    send(DISCONNECT_MESSAGE)
+    stop_thread=True
+    sock.close()
+    break
+  elif "/kick" in message:
+    if username=="admin":
+     send(message)
+    else:
+     print("Commands can only be executed by an admin.")
+  elif "/ban" in message:
    if username=="admin":
-    send(message)
+     send(message)
    else:
-    print("Commands can only be executed by an admin.")
- elif "/ban" in message:
-  if username=="admin":
-    send(message)
+     print("Commands can only be executed by an admin.")
   else:
-    print("Commands can only be executed by an admin.")
- else:
-  send(message)
+   send(message)
+ except(EOFError,ValueError):
+  break
+
  
