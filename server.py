@@ -1,6 +1,9 @@
+#importing modules
 import socket
 import threading
 
+
+#defining constants
 HEADER=1024
 PORT=5050
 FORMAT="utf-8"
@@ -19,16 +22,18 @@ WELCOME_MESSAGE = (
 
 )
 
-
+#storing client,admin,banned connections
 clients={}
 admins=[]
 banned_usernames=[]
 
+#binding the socket
 SERVER=socket.gethostbyname(socket.gethostname())
 ADDR=(SERVER,PORT)
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind(ADDR)
 
+#function to send a message to the client
 def sendMessage(conn,message):
     final_message=message.encode(FORMAT)
     final_message_length=len(final_message)
@@ -38,21 +43,21 @@ def sendMessage(conn,message):
     conn.send(final_message) 
 
 
-
+#function to broadcast the message
 def broadcast(message,currclientusername):
   for username,conn in clients.items():
     if username!=currclientusername:
       sendMessage(conn,message)
 
 
-
+#listing all users
 def listallusers(conn):
   online_users=', '.join(clients.keys())
   message=f"{online_users}"
   sendMessage(conn,message)
 
 
-
+#function for private conversation
 def msgPrivately(message,currclientusername):
   msg_parts=message.split(' ',2)
   
@@ -74,7 +79,7 @@ def msgPrivately(message,currclientusername):
    sendMessage(connection_sender,confirmation_message)
 
 
-
+#handling /kick
 def handleKick(msg,connection):
   msg_parts=msg.split(' ')
   if len(msg_parts)<2:
@@ -94,7 +99,7 @@ def handleKick(msg,connection):
     sendMessage(connection,"User not online")  
 
 
-
+#handling /ban
 def handleBan(msg,connection):
   msg_parts=msg.split(' ')
   if len(msg_parts)<2:
@@ -115,11 +120,13 @@ def handleBan(msg,connection):
     sendMessage(connection,"User not online")  
 
 
-
+#main logic
 def handleClient(conn,addr):
 
   connected=True
   while connected:
+
+    #checks on username
     while True:
      username_length=conn.recv(HEADER).decode(FORMAT)
 
@@ -170,11 +177,13 @@ def handleClient(conn,addr):
        sendMessage(conn,message)
        clients[username]=conn
        break
+   
 
+   #Informing  other users when someone joins or leaves the chat
     print(f"[NEW-CONNECTION] {username} connected")
     if username!="admin":
      broadcast(f"🟢 {username} joined the chat.",username)
-
+    
     sendMessage(conn,WELCOME_MESSAGE)
     while True:
       rawdata=conn.recv(HEADER)       
@@ -188,6 +197,9 @@ def handleClient(conn,addr):
          print(f"[Client {username}] disconnected")
          broadcast(f" 🔴 {username} left the chat. ",username)
          break
+      
+
+      #handling the message appropriately 
       msg_length=rawdata.decode(FORMAT)
       msg_length=int(msg_length)
       msg=conn.recv(msg_length).decode(FORMAT)
@@ -212,10 +224,11 @@ def handleClient(conn,addr):
       else:
        msg=f"[{username}] {msg}"
        broadcast(msg,username)
-     
-     
+          
   conn.close()
 
+
+#start of connection b/w client and server
 def start():
   sock.listen()
   print(f"[LISTENING] Server is listening {SERVER}")

@@ -1,6 +1,9 @@
+#importing modules
 import socket
 import threading
 
+
+#defining constants
 HEADER=1024
 PORT=5050
 FORMAT="utf-8"
@@ -11,6 +14,19 @@ stop_thread=False
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
 sock.connect(ADDR)
+
+
+#function to send a message to the server
+def sendmessages(message,sock):
+   final_message=message.encode(FORMAT)
+   final_message_length=len(final_message)
+   final_message_length=str(final_message_length).encode(FORMAT)
+   final_message_length+=b' '*(HEADER-len(final_message_length))   
+   sock.send(final_message_length)
+   sock.send(final_message)  
+
+
+#function to receive the message from server
 def receivemessages():
  global stop_thread
  while True:
@@ -33,34 +49,21 @@ def receivemessages():
 
 def send(msg):
  if stop_thread==False:
-  message=msg.encode(FORMAT)
-  msg_length=len(message)
-  send_length=str(msg_length).encode(FORMAT)  
-  send_length+=b' '*(HEADER-len(send_length))
-  sock.send(send_length)
-  sock.send(message)
+  sendmessages(msg,sock)
   
 
+#main logic
 while True:
 
+  #taking username and validating admin password
   username=input("Enter your username -> ") 
   username = username.strip() 
   username=username.replace(' ','_')
-  user=username.encode(FORMAT)
-  user_length=len(user)
-  send_user_length=str(user_length).encode(FORMAT)
-  send_user_length+=b' '*(HEADER-len(send_user_length))
-  sock.send(send_user_length)
-  sock.send(user)
+  sendmessages(username,sock)
  
   if username=="admin":
    password=input("Enter the admin's passsword: ")
-   final_message=password.encode(FORMAT)
-   final_message_length=len(final_message)
-   final_message_length=str(final_message_length).encode(FORMAT)
-   final_message_length+=b' '*(HEADER-len(final_message_length))   
-   sock.send(final_message_length)
-   sock.send(final_message)  
+   sendmessages(password,sock)  
  
    server_pw_valid_msg_length=sock.recv(HEADER).decode(FORMAT)   
    server_pw_valid_msg_length=int(server_pw_valid_msg_length)
@@ -84,10 +87,18 @@ while True:
   else:
    print(username_existence_msg)
    break
-  
+
+
+#taking further inputs  
 welcomemsg_length=sock.recv(HEADER).decode(FORMAT)
-welcomemsg_length=int(welcomemsg_length)
-welcomemsg=sock.recv(welcomemsg_length).decode(FORMAT)
+if welcomemsg_length:
+  welcomemsg_length=int(welcomemsg_length)
+  welcomemsg=sock.recv(welcomemsg_length).decode(FORMAT)
+
+else :
+  sock.close()
+  exit()
+
 print(welcomemsg)
 thread=threading.Thread(target=receivemessages)
 thread.start()
