@@ -29,28 +29,27 @@ ADDR=(SERVER,PORT)
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind(ADDR)
 
+def sendMessage(conn,message):
+    final_message=message.encode(FORMAT)
+    final_message_length=len(final_message)
+    final_message_length=str(final_message_length).encode(FORMAT)
+    final_message_length+=b' '*(HEADER-len(final_message_length))   
+    conn.send(final_message_length)
+    conn.send(final_message) 
+
+
 
 def broadcast(message,currclientusername):
-  final_message=message.encode(FORMAT)
-  final_message_length=len(final_message)
-  final_message_length=str(final_message_length).encode(FORMAT)
-  final_message_length+=b' '*(HEADER-len(final_message_length))
   for username,conn in clients.items():
     if username!=currclientusername:
-       
-       conn.send(final_message_length)
-       conn.send(final_message)
+      sendMessage(conn,message)
 
 
 
 def listallusers(conn):
   online_users=', '.join(clients.keys())
-  final_message=f"{online_users}".encode(FORMAT)
-  final_message_length=len(final_message)
-  final_message_length=str(final_message_length).encode(FORMAT)
-  final_message_length+=b' '*(HEADER-len(final_message_length))
-  conn.send(final_message_length)
-  conn.send(final_message)
+  message=f"{online_users}"
+  sendMessage(conn,message)
 
 
 
@@ -68,22 +67,15 @@ def msgPrivately(message,currclientusername):
     connection_sender.send("[SERVER] User is not online".encode(FORMAT))
   else:  
    connection_receiver=clients[user]
-   final_message=f"[Private message from {currclientusername}] {actualmessage}".encode(FORMAT)
-   final_message_length=len(final_message)
-   final_message_length=str(final_message_length).encode(FORMAT)
-   final_message_length+=b' '*(HEADER-len(final_message_length))
-   connection_receiver.send(final_message_length)
-   connection_receiver.send(final_message) 
+   message=f"[Private message from {currclientusername}] {actualmessage}"
+   sendMessage(connection_receiver,message)
    
-   
-   confirmation_message=f"Your message was sent to {user} successfully".encode(FORMAT)
-   confirmation_message_length=len(confirmation_message)
-   confirmation_message_length=str(confirmation_message_length).encode(FORMAT)
-   confirmation_message_length+=b' '*(HEADER-len(confirmation_message_length))  
-   connection_sender.send(confirmation_message_length)
-   connection_sender.send(confirmation_message)
+   confirmation_message=f"Your message was sent to {user} successfully"
+   sendMessage(connection_sender,confirmation_message)
 
-def handleKick(msg):
+
+
+def handleKick(msg,connection):
   msg_parts=msg.split(' ')
   if len(msg_parts)<2:
     return
@@ -92,18 +84,18 @@ def handleKick(msg):
     kick_user_conn=clients[username]
     del clients[username]
     message="You were kicked by an admin."
-    final_message=message.encode(FORMAT)
-    final_message_length=len(final_message)
-    final_message_length=str(final_message_length).encode(FORMAT)
-    final_message_length+=b' '*(HEADER-len(final_message_length))   
-    kick_user_conn.send(final_message_length)
-    kick_user_conn.send(final_message)
+    sendMessage(kick_user_conn,message)
+    sendMessage(kick_user_conn,DISCONNECT_MESSAGE) 
     kick_broadcast_msg=f"👢 {username} was kicked from the server."
     broadcast(kick_broadcast_msg,username)  
     kick_user_conn.close()
-    return  
+    return
+  else :
+    sendMessage(connection,"User not online")  
 
-def handleBan(msg):
+
+
+def handleBan(msg,connection):
   msg_parts=msg.split(' ')
   if len(msg_parts)<2:
     return
@@ -113,16 +105,16 @@ def handleBan(msg):
     banned_usernames.append(username)
     del clients[username]
     message="You were banned by an admin."
-    final_message=message.encode(FORMAT)
-    final_message_length=len(final_message)
-    final_message_length=str(final_message_length).encode(FORMAT)
-    final_message_length+=b' '*(HEADER-len(final_message_length))   
-    ban_user_conn.send(final_message_length)
-    ban_user_conn.send(final_message)
+    sendMessage(ban_user_conn,message)
+    sendMessage(ban_user_conn,DISCONNECT_MESSAGE) 
     ban_broadcast_msg=f"🔨 {username} was banned from the server."
     broadcast(ban_broadcast_msg,username)  
     ban_user_conn.close()
     return
+  else :
+    sendMessage(connection,"User not online")  
+
+
 
 def handleClient(conn,addr):
 
@@ -137,12 +129,7 @@ def handleClient(conn,addr):
        
       if username in banned_usernames:
         message="You are banned from the server."
-        final_message=message.encode(FORMAT)
-        final_message_length=len(final_message)
-        final_message_length=str(final_message_length).encode(FORMAT)
-        final_message_length+=b' '*(HEADER-len(final_message_length))   
-        conn.send(final_message_length)
-        conn.send(final_message)
+        sendMessage(conn,message)
         conn.close()
         return
 
@@ -163,57 +150,32 @@ def handleClient(conn,addr):
          
         if password=="notanadminpassword":
           message="Welcome Admin!"
-          final_message=message.encode(FORMAT)
-          final_message_length=len(final_message)
-          final_message_length=str(final_message_length).encode(FORMAT)
-          final_message_length+=b' '*(HEADER-len(final_message_length))   
-          conn.send(final_message_length)
-          conn.send(final_message) 
+          sendMessage(conn,message)
           clients["admin"] = conn 
           admins.append(conn)
           break
 
         else :
          message="Wrong password"
-         final_message=message.encode(FORMAT)
-         final_message_length=len(final_message)
-         final_message_length=str(final_message_length).encode(FORMAT)
-         final_message_length+=b' '*(HEADER-len(final_message_length))   
-         conn.send(final_message_length)
-         conn.send(final_message) 
-
+         sendMessage(conn,message)
          conn.close()
          return 
 
       elif username in clients:
        message="[SERVER] Username already exists. Please enter another username."
-       final_message=message.encode(FORMAT)
-       final_message_length=len(final_message)
-       final_message_length=str(final_message_length).encode(FORMAT)
-       final_message_length+=b' '*(HEADER-len(final_message_length))   
-       conn.send(final_message_length)
-       conn.send(final_message) 
+       sendMessage(conn,message)
       
       else:
        message=f"[SERVER] Username accepted. Welcome! {username}"
-       final_message=message.encode(FORMAT)
-       final_message_length=len(final_message)
-       final_message_length=str(final_message_length).encode(FORMAT)
-       final_message_length+=b' '*(HEADER-len(final_message_length))   
-       conn.send(final_message_length)
-       conn.send(final_message) 
+       sendMessage(conn,message)
        clients[username]=conn
        break
 
     print(f"[NEW-CONNECTION] {username} connected")
     if username!="admin":
      broadcast(f"🟢 {username} joined the chat.",username)
-    welcome_msg=WELCOME_MESSAGE.encode('utf8')
-    welcome_length=len(welcome_msg)
-    welcome_length=str(welcome_length).encode(FORMAT)
-    welcome_length+=b' '*(HEADER-len(welcome_length))
-    conn.send(welcome_length)
-    conn.send(welcome_msg)
+
+    sendMessage(conn,WELCOME_MESSAGE)
     while True:
       rawdata=conn.recv(HEADER)       
        
@@ -244,9 +206,9 @@ def handleClient(conn,addr):
       elif "/users" in msg:
        listallusers(conn) 
       elif "/ban" in msg and conn in admins:
-        handleBan(msg)
+        handleBan(msg,conn)
       elif "/kick" in msg and conn in admins:
-        handleKick(msg)
+        handleKick(msg,conn)
       else:
        msg=f"[{username}] {msg}"
        broadcast(msg,username)

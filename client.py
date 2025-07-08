@@ -24,9 +24,12 @@ def receivemessages():
    msg_length=rawdata.decode(FORMAT)
    msg_length=int(msg_length)
    msg=sock.recv(msg_length).decode(FORMAT)
-   print(f"\n{msg}")
-    
+   if msg==DISCONNECT_MESSAGE:
+    stop_thread=True
+    sock.close()
 
+   print(f"\n{msg}")
+   
 
 def send(msg):
  if stop_thread==False:
