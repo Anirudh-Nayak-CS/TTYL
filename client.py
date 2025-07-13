@@ -1,7 +1,7 @@
 #importing modules
 import socket
 import threading
-
+import rsa
 
 #defining constants
 HEADER=1024
@@ -12,7 +12,8 @@ ADDR=(SERVER,PORT)
 DISCONNECT_MESSAGE="/quit"
 stop_thread=False
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-
+public_key,private_key=rsa.newkeys(1024)
+public_partner=None
 sock.connect(ADDR)
 
 

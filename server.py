@@ -13,12 +13,13 @@ WELCOME_MESSAGE = (
     "║                        Welcome to TTYL                           ║\n"
     "╠══════════════════════════════════════════════════════════════════╣\n"
     "║ Commands:                                                        ║\n"
-    "║ /quit                     → Disconnect from server               ║\n"
-    "║ /msg <username> msg       → Privately message a user             ║\n"
-    "║ /users                    → List of users online                 ║\n"
-    "║ /vote <username>          → Cast vote to kick <username>         ║\n"
-    "║ /kick <username>          → Kick a user (admin only)             ║\n"
-    "║ /ban <username>           → Ban a user (admin only)              ║\n"
+    "║ /quit                      → Disconnect from server              ║\n"
+    "║ /msg <username> msg        → Privately message a user            ║\n"
+    "║ /users                     → List of users online                ║\n"
+    "║ /vote <username>           → Cast vote to kick <username>        ║\n"
+    "║ /changename <new username> → Change your username                ║\n"
+    "║ /kick <username>           → Kick a user (admin only)            ║\n"
+    "║ /ban <username>            → Ban a user (admin only)             ║\n"
     "╚══════════════════════════════════════════════════════════════════╝"
 )
 
@@ -42,6 +43,24 @@ def sendMessage(conn,message):
     final_message_length+=b' '*(HEADER-len(final_message_length))   
     conn.send(final_message_length)
     conn.send(final_message) 
+
+#function to change username
+def changeUsername(msg,conn,username):
+   parts=msg.split(' ',1)
+   message_length=len(parts)
+   if message_length!=2:
+     sendMessage(conn,"[SERVER] Invalid format. Use /changename <new username>.")
+     return username
+   new_name=parts[1]
+   if new_name in  clients:
+     sendMessage(conn,"[SERVER] Username exists. Try another username.")
+     return username
+   clients.pop(username)
+   clients[new_name]=conn
+   sendMessage(conn,f"[SERVER] Your username has been changed to {new_name}")
+   broadcast(f"{username} changed their name to {new_name}",new_name)
+   return new_name
+
 
 #function to check the number of votes recieved by a  user to kick him/her
 def checkVoteforKick(message,conn,username):
@@ -254,6 +273,8 @@ def handleClient(conn,addr):
        listallusers(conn) 
       elif "/vote" in msg:
         checkVoteforKick(msg,conn,username)
+      elif "/changename" in msg:
+        username=changeUsername(msg,conn,username)
       elif "/ban" in msg and conn in admins:
         handleBan(msg,conn)
       elif "/kick" in msg and conn in admins:
