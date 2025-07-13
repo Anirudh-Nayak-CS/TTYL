@@ -1,7 +1,7 @@
 #importing modules
 import socket
 import threading
-
+import math
 
 #defining constants
 HEADER=1024
@@ -9,23 +9,24 @@ PORT=5050
 FORMAT="utf-8"
 DISCONNECT_MESSAGE="/quit"
 WELCOME_MESSAGE = (
-    "╔════════════════════════════════════════════════╗\n"
-    "║                Welcome to TTYL                 ║\n"
-    "╠════════════════════════════════════════════════╣\n"
-    "║ Commands:                                      ║\n"
-    "║ /quit               → Disconnect from server   ║\n"
-    "║ /msg <username> msg → Privately message a user ║\n"
-    "║ /users              → List of users online     ║\n"
-    "║ /kick <username>    → Kick a user              ║\n"
-    "║ /ban <username>     → Ban a user               ║\n"  
-    "╚════════════════════════════════════════════════╝"
-
+    "╔══════════════════════════════════════════════════════════════════╗\n"
+    "║                        Welcome to TTYL                           ║\n"
+    "╠══════════════════════════════════════════════════════════════════╣\n"
+    "║ Commands:                                                        ║\n"
+    "║ /quit                     → Disconnect from server               ║\n"
+    "║ /msg <username> msg       → Privately message a user             ║\n"
+    "║ /users                    → List of users online                 ║\n"
+    "║ /vote <username>          → Cast vote to kick <username>         ║\n"
+    "║ /kick <username>          → Kick a user (admin only)             ║\n"
+    "║ /ban <username>           → Ban a user (admin only)              ║\n"
+    "╚══════════════════════════════════════════════════════════════════╝"
 )
 
 #storing client,admin,banned connections
 clients={}
 admins=[]
 banned_usernames=[]
+votecount={}
 
 #binding the socket
 SERVER=socket.gethostbyname(socket.gethostname())
@@ -42,8 +43,39 @@ def sendMessage(conn,message):
     conn.send(final_message_length)
     conn.send(final_message) 
 
+#function to check the number of votes recieved by a  user to kick him/her
+def checkVoteforKick(message,conn,username):
+   parts=message.split(' ',1)
+   message_length=len(parts)
+   if message_length!=2:
+     sendMessage(conn,"[SERVER] Invalid format. Use /vote <username>.")
+     return
+   vote_username=parts[1]
+   if vote_username not in votecount.keys():
+     votecount[vote_username]=1
+     broadcast(f"[SERVER] {vote_username} Received {votecount[vote_username]}/{math.ceil(len(clients)/2)} votes for getting kicked.",username)   
+     sendMessage(conn,f"[SERVER] {vote_username} Received {votecount[vote_username]}/{math.ceil(len(clients)/2)} votes for getting kicked.")  
+   else:
+    votecount[vote_username]+=1
+    broadcast(f"[SERVER] {vote_username} Received {votecount[vote_username]}/{math.ceil(len(clients)/2)} votes for getting kicked.",username)   
+    sendMessage(conn,f"[SERVER] {vote_username} Received {votecount[vote_username]}/{math.ceil(len(clients)/2)} votes for getting kicked.")
+   if votecount[vote_username] >= len(clients)/2:
+     handleKickByVote("You were kicked from chat due to majority vote by other users. ",vote_username)
 
-#function to broadcast the message
+#handle kick by vote
+def handleKickByVote(message,username):
+     if username not in clients:
+       return
+     kick_user_conn=clients[username]
+     del clients[username]
+     sendMessage(kick_user_conn,message)
+     sendMessage(kick_user_conn,DISCONNECT_MESSAGE) 
+     kick_broadcast_msg=f"👢 {username} was kicked from the server."
+     broadcast(kick_broadcast_msg,username)  
+     votecount[username]=0 
+     kick_user_conn.close()
+
+#function to broadcast the message 
 def broadcast(message,currclientusername):
   for username,conn in clients.items():
     if username!=currclientusername:
@@ -79,24 +111,27 @@ def msgPrivately(message,currclientusername):
    sendMessage(connection_sender,confirmation_message)
 
 
+
+
 #handling /kick
-def handleKick(msg,connection):
-  msg_parts=msg.split(' ')
-  if len(msg_parts)<2:
-    return
-  username=msg_parts[1]
-  if username!="admin" and username in clients:
-    kick_user_conn=clients[username]
-    del clients[username]
-    message="You were kicked by an admin."
-    sendMessage(kick_user_conn,message)
-    sendMessage(kick_user_conn,DISCONNECT_MESSAGE) 
-    kick_broadcast_msg=f"👢 {username} was kicked from the server."
-    broadcast(kick_broadcast_msg,username)  
-    kick_user_conn.close()
-    return
-  else :
-    sendMessage(connection,"User not online")  
+def handleKickByAdmin(msg,connection):
+  if "/kick" in msg:
+   msg_parts=msg.split(' ')
+   if len(msg_parts)<2:
+     return
+   username=msg_parts[1]
+   if username!="admin" and username in clients:
+     kick_user_conn=clients[username]
+     del clients[username]
+     message="You were kicked by an admin."
+     sendMessage(kick_user_conn,message)
+     sendMessage(kick_user_conn,DISCONNECT_MESSAGE) 
+     kick_broadcast_msg=f"👢 {username} was kicked from the server."
+     broadcast(kick_broadcast_msg,username)  
+     kick_user_conn.close()
+     return
+   else :
+     sendMessage(connection,"User not online")
 
 
 #handling /ban
@@ -217,14 +252,16 @@ def handleClient(conn,addr):
        msgPrivately(msg,username)
       elif "/users" in msg:
        listallusers(conn) 
+      elif "/vote" in msg:
+        checkVoteforKick(msg,conn,username)
       elif "/ban" in msg and conn in admins:
         handleBan(msg,conn)
       elif "/kick" in msg and conn in admins:
-        handleKick(msg,conn)
+        handleKickByAdmin(msg,conn)
       else:
        msg=f"[{username}] {msg}"
        broadcast(msg,username)
-          
+  votecount[username]=0        
   conn.close()
 
 
