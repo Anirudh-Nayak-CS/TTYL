@@ -36,7 +36,7 @@ Roles are authenticated via passwords:
 pip install emoji rsa
 ```
 
-###🖥️ Run the Server
+🖥️ Run the Server
 
 ```bash
 python server.py
@@ -73,4 +73,10 @@ Type aliases in your messages (e.g., `:fire:`) and they’ll automatically be co
 - ✅ RSA-based encryption support  
 - 🔒 End-to-end encryption *(WIP)*  
 - 🧾 Reporting and audit logs *(WIP)*  
-- 📨 Cross-subnet connectivity *(WIP)*  
+- 📨 Cross-subnet connectivity *(WIP)*
+
+## 👥 Made By
+
+- Anirudh Nayak
+- Sucheth K Katte
+
