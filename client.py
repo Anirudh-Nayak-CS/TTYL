@@ -1,51 +1,130 @@
+#importing modules
 import socket
 import threading
-
-# --- Configuration ---
-SERVER_IP = '127.0.0.1'  # Change to your server's IP
-SERVER_PORT = 5555       # Must match server's port
+import rsa
+#defining constants
+HEADER=1024
+PORT=5050
+FORMAT="utf-8"
+SERVER=socket.gethostbyname(socket.gethostname())
+ADDR=(SERVER,PORT)
 DISCONNECT_MESSAGE="/quit"
+stop_thread=False
+sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+public_key,private_key=rsa.newkeys(1024)
+public_partner=None
+sock.connect(ADDR)
 
 
+#function to send a message to the server
+def sendmessages(message,sock):
+   final_message=message.encode(FORMAT)
+   final_message_length=len(final_message)
+   final_message_length=str(final_message_length).encode(FORMAT)
+   final_message_length+=b' '*(HEADER-len(final_message_length))   
+   sock.send(final_message_length)
+   sock.send(final_message)  
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((SERVER_IP, SERVER_PORT))
 
-username = input("Enter your username: ")
-client.send(username.encode('utf-8'))
+#function to receive the message from server
+def receivemessages():
+ global stop_thread
+ while True:
+ 
+   if stop_thread==True:
+    break
+   rawdata=sock.recv(HEADER)       
+       
+   if not rawdata:
+    break
+ 
+   msg_length=rawdata.decode(FORMAT)
+   msg_length=int(msg_length)
+   msg=sock.recv(msg_length).decode(FORMAT)
+   if msg==DISCONNECT_MESSAGE:
+    stop_thread=True
+    sock.close()
+    exit()
+   else:
+    print(f"\n{msg}")
+   
 
-print("Connected to server. You can start chatting!\n")
+def send(msg):
+ if stop_thread==False:
+  sendmessages(msg,sock)
+  
 
-# --- Receive messages from server ---
-def receive_messages():
-    while True:
-        try:
-            message = client.recv(1024).decode('utf-8')
-            if message:
-                print(f"\n{message}")
-            else:
-                print("\nDisconnected from server.")
-                break
-        except:
-            print("\nError receiving message.")
-            break
+#main logic
+while True:
 
-# --- Send messages to server ---
-def send_messages():
-    while True:
-        message = input()
-        if message== DISCONNECT_MESSAGE:
-            client.close()
-            break
-        try:
-            client.send(message.encode('utf-8'))
-        except:
-            print("Failed to send message.")
-            break
+  #taking username and validating admin password
+  username=input("Enter your username -> ") 
+  username = username.strip() 
+  username=username.replace(' ','_')
+  sendmessages(username,sock)
+ 
+  if username=="admin":
+   password=input("Enter the admin's passsword: ")
+   sendmessages(password,sock)  
+ 
+   server_pw_valid_msg_length=sock.recv(HEADER).decode(FORMAT)   
+   server_pw_valid_msg_length=int(server_pw_valid_msg_length)
+   server_pw_valid_msg=sock.recv(server_pw_valid_msg_length).decode(FORMAT)
+   
+   if server_pw_valid_msg=="Wrong password":
+     print("Connection refused. Wrong password")
+     stop_thread=True
+     sock.close()
+     exit()
+   else:
+    print(server_pw_valid_msg)
+ 
+  msg_length=sock.recv(HEADER).decode(FORMAT)
+  msg_length=int(msg_length)
+  username_existence_msg=sock.recv(msg_length).decode(FORMAT)
+  
+  if "Username already exists" in username_existence_msg:
+     print(username_existence_msg)
+     continue
+  else:
+   print(username_existence_msg)
+   break
 
-# --- Run threads for sending and receiving ---
-recv_thread = threading.Thread(target=receive_messages)
-recv_thread.daemon = True
-recv_thread.start()
 
-send_messages()  # Runs on main thread
+#taking further inputs  
+welcomemsg_length=sock.recv(HEADER).decode(FORMAT)
+if welcomemsg_length:
+  welcomemsg_length=int(welcomemsg_length)
+  welcomemsg=sock.recv(welcomemsg_length).decode(FORMAT)
+
+else :
+  sock.close()
+  exit()
+
+print(welcomemsg)
+thread=threading.Thread(target=receivemessages)
+thread.start()
+while True:
+ try:
+  message=input()
+  if message=="/quit":
+    send(DISCONNECT_MESSAGE)
+    stop_thread=True
+    sock.close()
+    break
+  elif "/kick" in message:
+    if username=="admin":
+     send(message)
+    else:
+     print("Commands can only be executed by an admin.")
+  elif "/ban" in message:
+   if username=="admin":
+     send(message)
+   else:
+     print("Commands can only be executed by an admin.")
+  else:
+   send(message)
+ except(EOFError,ValueError):
+  break
+
+ 
