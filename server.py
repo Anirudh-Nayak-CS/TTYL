@@ -18,14 +18,18 @@ WELCOME_MESSAGE = (
     "║ /users                     → List of users online                ║\n"
     "║ /vote <username>           → Cast vote to kick <username>        ║\n"
     "║ /changename <new username> → Change your username                ║\n"
-    "║ /kick <username>           → Kick a user (admin only)            ║\n"
+    "║ /kick <username>           → Kick a user (admin & moderator only)║\n"
     "║ /ban <username>            → Ban a user (admin only)             ║\n"
+    "║ /warn <username> <msg>     → Warn a user (moderator only)        ║\n"
+    "║ /mute <username> <minutes> → Mute a user (moderator only)        ║\n"  
     "╚══════════════════════════════════════════════════════════════════╝"
 )
 
 #storing client,admin,banned connections
 clients={}
 admins=[]
+moderators=[]
+muted_users=set()
 banned_usernames=[]
 votecount={}
 
@@ -43,6 +47,53 @@ def sendMessage(conn,message):
     final_message_length+=b' '*(HEADER-len(final_message_length))   
     conn.send(final_message_length)
     conn.send(final_message) 
+
+#function to warn user
+def handleWarn(msg,conn):
+  parts=msg.split(' ',2)
+  if len(parts)!=3:
+    sendMessage(conn,"[SERVER] Invalid format. Use /warn <username> <message>.")
+    return
+  message=parts[2]
+  user=parts[1]
+  if user not in clients:
+    sendMessage(conn,f"{user} is not online.")
+    return
+  warning_user_conn=clients[user]
+  sendMessage(warning_user_conn,'❗ '+message+' ❗')
+  sendMessage(conn,f"Succuessfully warned {user}.")
+
+#function to mute a user
+def handleMute(msg,conn):
+  parts=msg.split(' ',2)
+  if len(parts)!=3:
+    sendMessage(conn,"[SERVER] Invalid format. Use /mute <username> <duration(minutes)>.")
+    return
+  try:
+   time=int(parts[2])
+  except ValueError:
+   sendMessage(conn,"The duration(mins) should be an integer.")
+   return
+  user=parts[1]
+  if user not in clients:
+    sendMessage(conn,f"{user} is not online.")
+    return
+  mute_user_conn=clients[user]
+  broadcast(f"{user} has been muted for {time} minutes by the moderator.",user)  
+  muted_users.add(user)
+  sendMessage(mute_user_conn,f"You have been muted for {time} minutes by the moderator.")
+
+
+  timer=threading.Timer(time*60,unmute_user,args=(user,))
+  timer.start()
+  sendMessage(conn,f"Succuessfully muted {user} for {time} minutes.")
+
+#function to unmute a user
+def unmute_user(username):
+  if username in muted_users:
+   muted_users.discard(username)
+   if username in clients:
+     sendMessage(clients[username],f"You have been unmuted.")
 
 #function to change username
 def changeUsername(msg,conn,username):
@@ -96,8 +147,10 @@ def handleKickByVote(message,username):
 
 #function to broadcast the message 
 def broadcast(message,currclientusername):
+  if currclientusername in muted_users:
+   return
   for username,conn in clients.items():
-    if username!=currclientusername:
+    if username!=currclientusername and username not in muted_users:
       sendMessage(conn,message)
 
 
@@ -113,14 +166,14 @@ def msgPrivately(message,currclientusername):
   msg_parts=message.split(' ',2)
   
   connection_sender=clients[currclientusername]
-  if len(msg_parts)<3:
-    connection_sender.send("[SERVER] Invalid format.Use /msg <username> msg".encode(FORMAT))
+  if len(msg_parts)!=3:
+    sendMessage(connection_sender,"[SERVER] Invalid format.Use /msg <username> msg")
     return
   
   user=msg_parts[1]
   actualmessage=msg_parts[2]
   if user not in clients:
-    connection_sender.send("[SERVER] User is not online".encode(FORMAT))
+   sendMessage(connection_sender,"[SERVER] User is not online")
   else:  
    connection_receiver=clients[user]
    message=f"[Private message from {currclientusername}] {actualmessage}"
@@ -133,10 +186,10 @@ def msgPrivately(message,currclientusername):
 
 
 #handling /kick
-def handleKickByAdmin(msg,connection):
+def handleKickByAdminandMod(msg,connection):
   if "/kick" in msg:
    msg_parts=msg.split(' ')
-   if len(msg_parts)<2:
+   if len(msg_parts)!=2:
      return
    username=msg_parts[1]
    if username!="admin" and username in clients:
@@ -156,7 +209,7 @@ def handleKickByAdmin(msg,connection):
 #handling /ban
 def handleBan(msg,connection):
   msg_parts=msg.split(' ')
-  if len(msg_parts)<2:
+  if len(msg_parts)!=2:
     return
   username=msg_parts[1]
   if username!="admin" and username in clients:
@@ -182,7 +235,7 @@ def handleClient(conn,addr):
 
     #checks on username
     while True:
-     username_length=conn.recv(HEADER).decode(FORMAT)
+     username_length=conn.recv(HEADER).decode(FORMAT).strip()
 
      if username_length:
       username_length=int(username_length)
@@ -193,9 +246,10 @@ def handleClient(conn,addr):
         sendMessage(conn,message)
         conn.close()
         return
-
+      
+    #checks if username is an admin
       elif username=="admin": 
-        rawdata=conn.recv(HEADER)       
+        rawdata=conn.recv(HEADER).strip()       
        
         if not rawdata:
          connected=False
@@ -221,6 +275,36 @@ def handleClient(conn,addr):
          sendMessage(conn,message)
          conn.close()
          return 
+      
+     #checks if username is an moderator
+      elif username=="moderator": 
+        rawdata=conn.recv(HEADER).strip()       
+       
+        if not rawdata:
+         connected=False
+         if username in clients:
+             del clients[username]
+         if conn in moderators:
+            moderators.remove(conn)  
+         print(f"[Client {username}] disconnected")
+         broadcast(f" 🔴 {username} left the chat. ",username)
+         break
+        password_length=int(rawdata.decode(FORMAT))
+        password=conn.recv(password_length).decode(FORMAT)
+         
+        if password=="modpassword":
+          message="Welcome Moderator!"
+          sendMessage(conn,message)
+          clients[username] = conn 
+          moderators.append(conn)
+          break
+
+        else :
+         message="Wrong password"
+         sendMessage(conn,message)
+         conn.close()
+         return 
+        
 
       elif username in clients:
        message="[SERVER] Username already exists. Please enter another username."
@@ -235,12 +319,12 @@ def handleClient(conn,addr):
 
    #Informing  other users when someone joins or leaves the chat
     print(f"[NEW-CONNECTION] {username} connected")
-    if username!="admin":
+    if username not in ["admin","moderator"]:
      broadcast(f"🟢 {username} joined the chat.",username)
     
     sendMessage(conn,WELCOME_MESSAGE)
     while True:
-      rawdata=conn.recv(HEADER)       
+      rawdata=conn.recv(HEADER).strip()       
        
       if not rawdata:
          connected=False
@@ -254,7 +338,7 @@ def handleClient(conn,addr):
       
 
       #handling the message appropriately 
-      msg_length=rawdata.decode(FORMAT)
+      msg_length=rawdata.decode(FORMAT).strip()
       msg_length=int(msg_length)
       msg=conn.recv(msg_length).decode(FORMAT)
 
@@ -262,23 +346,31 @@ def handleClient(conn,addr):
         connected=False
         if conn in admins:
           admins.remove(conn)
+        elif conn in moderators:
+          moderators.remove(conn)
         del clients[username] 
         print(f"[CLIENT {username}] disconnected ")
         broadcast(f" 🔴 {username} left the chat. ",username)
         break 
       print(f"{addr}[{username}]{msg}")
-      if "/msg " in msg:
+      if msg.startswith("/msg ") in msg:
        msgPrivately(msg,username)
-      elif "/users" in msg:
+      elif msg.startswith("/users ") in msg:
        listallusers(conn) 
-      elif "/vote" in msg:
+      elif msg.startswith("/vote ") in msg:
         checkVoteforKick(msg,conn,username)
-      elif "/changename" in msg:
+      elif msg.startswith("/changename ") in msg:
         username=changeUsername(msg,conn,username)
-      elif "/ban" in msg and conn in admins:
+      elif msg.startswith("/ban ") in msg and conn in admins:
+        print("trying to ban")
         handleBan(msg,conn)
-      elif "/kick" in msg and conn in admins:
-        handleKickByAdmin(msg,conn)
+      elif msg.startswith("/kick ") in msg and (conn in admins or conn in moderators):
+        print("trying to kick")
+        handleKickByAdminandMod(msg,conn)
+      elif msg.startswith("/mute ") in msg and conn in moderators:
+        handleMute(msg,conn)
+      elif msg.startswith("/warn ") in msg and conn in moderators:
+        handleWarn(msg,conn)
       else:
        msg=f"[{username}] {msg}"
        broadcast(msg,username)

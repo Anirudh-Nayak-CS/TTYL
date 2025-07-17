@@ -1,7 +1,6 @@
 #importing modules
 import socket
 import threading
-import rsa
 
 #defining constants
 HEADER=1024
@@ -12,7 +11,6 @@ ADDR=(SERVER,PORT)
 DISCONNECT_MESSAGE="/quit"
 stop_thread=False
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-public_key,private_key=rsa.newkeys(1024)
 public_partner=None
 sock.connect(ADDR)
 
@@ -34,7 +32,7 @@ def receivemessages():
  
    if stop_thread==True:
     break
-   rawdata=sock.recv(HEADER)       
+   rawdata=sock.recv(HEADER).strip()       
        
    if not rawdata:
     break
@@ -79,6 +77,23 @@ while True:
      exit()
    else:
     print(server_pw_valid_msg)
+
+  elif username=="moderator":
+    password=input("Enter the moderator's passsword: ")
+    sendmessages(password,sock)  
+  
+    server_pw_valid_msg_length=sock.recv(HEADER).decode(FORMAT)   
+    server_pw_valid_msg_length=int(server_pw_valid_msg_length)
+    server_pw_valid_msg=sock.recv(server_pw_valid_msg_length).decode(FORMAT)
+    
+    if server_pw_valid_msg=="Wrong password":
+      print("Connection refused. Wrong password")
+      stop_thread=True
+      sock.close()
+      exit()
+    else:
+     print(server_pw_valid_msg)
+    
  
   msg_length=sock.recv(HEADER).decode(FORMAT)
   msg_length=int(msg_length)
@@ -103,7 +118,7 @@ else :
   exit()
 
 print(welcomemsg)
-thread=threading.Thread(target=receivemessages)
+thread=threading.Thread(target=receivemessages,daemon=True)
 thread.start()
 while True:
  try:
@@ -114,15 +129,25 @@ while True:
     sock.close()
     break
   elif "/kick" in message:
-    if username=="admin":
+    if username=="admin" or username=="moderator":
      send(message)
     else:
-     print("Commands can only be executed by an admin.")
+     print("This command can only be executed by an admin or a moderator.")
   elif "/ban" in message:
    if username=="admin":
      send(message)
    else:
-     print("Commands can only be executed by an admin.")
+     print("This command can only be executed by an admin.")  
+  elif "/mute" in message:
+   if username=="moderator":
+     send(message)
+   else:
+     print("This command can only be executed by a moderator.")  
+  elif "/warn" in message:
+   if username=="moderator":
+     send(message)
+   else:
+     print("This command can only be executed by a moderator.")    
   else:
    send(message)
  except(EOFError,ValueError):
