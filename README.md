@@ -1,6 +1,6 @@
 # 💬 TTYL: A TCP Chat Server with Admin & Moderator Support
 
-TTYL is a feature-rich, terminal-based multi-client chat server built using Python’s socket programming.  
+Tele-type-writer-link(TTYL) is a feature-rich, terminal-based multi-client chat server built using Python’s socket programming.  
 It supports private messaging, user moderation, emoji support, and real-time communication over a local network (LAN).  
 Perfect for educational projects or small intranet messaging systems.
 
