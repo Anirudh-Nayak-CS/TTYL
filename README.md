@@ -28,7 +28,7 @@ Roles are authenticated via passwords:
 
 - Python 3.6+
 - [`emoji`](https://pypi.org/project/emoji/) — Emoji parsing and rendering
-- [`rsa`](https://pypi.org/project/rsa/) — *(Optional)* For encrypted messaging
+- [`rsa`](https://pypi.org/project/rsa/) — For encrypted messaging
 
 ### ✅ Install dependencies:
 
