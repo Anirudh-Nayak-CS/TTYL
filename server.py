@@ -2,6 +2,8 @@
 import socket
 import threading
 import math
+import datetime
+import emoji
 
 #defining constants
 HEADER=1024
@@ -9,7 +11,7 @@ PORT=5050
 FORMAT="utf-8"
 DISCONNECT_MESSAGE="/quit"
 WELCOME_MESSAGE = (
-    "╔══════════════════════════════════════════════════════════════════╗\n"
+  "\n╔══════════════════════════════════════════════════════════════════╗\n"
     "║                        Welcome to TTYL                           ║\n"
     "╠══════════════════════════════════════════════════════════════════╣\n"
     "║ Commands:                                                        ║\n"
@@ -24,6 +26,23 @@ WELCOME_MESSAGE = (
     "║ /mute <username> <minutes> → Mute a user (moderator only)        ║\n"  
     "╚══════════════════════════════════════════════════════════════════╝"
 )
+emoji_list={  
+    ":smile:": "😄",
+    ":laugh:": "😂",
+    ":sad:": "😢",
+    ":angry:": "😠",
+    ":heart:": "❤️",
+    ":thumbsup:": "👍",
+    ":thumbsdown:": "👎",
+    ":clap:": "👏",
+    ":fire:": "🔥",
+    ":star:": "⭐",
+    ":ok:": "👌",
+    ":wave:": "👋",
+    ":eyes:": "👀",
+    ":sleep:": "😴",
+    ":sunglasses:": "😎"
+    }
 
 #storing client,admin,banned connections
 clients={}
@@ -39,8 +58,15 @@ ADDR=(SERVER,PORT)
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 sock.bind(ADDR)
 
+#function to convert a sentence to emoji (if present)
+def convert2emoji(msg):
+  return emoji.emojize(msg,language='alias')
+
 #function to send a message to the client
 def sendMessage(conn,message):
+    message=convert2emoji(message)
+    timestamp=datetime.datetime.now().strftime("[%H:%M:%S]")
+    message=f"{timestamp} {message}"
     final_message=message.encode(FORMAT)
     final_message_length=len(final_message)
     final_message_length=str(final_message_length).encode(FORMAT)
@@ -236,86 +262,88 @@ def handleClient(conn,addr):
     #checks on username
     while True:
      username_length=conn.recv(HEADER).decode(FORMAT).strip()
-
-     if username_length:
-      username_length=int(username_length)
-      username=conn.recv(username_length).decode(FORMAT)
-       
-      if username in banned_usernames:
-        message="You are banned from the server."
-        sendMessage(conn,message)
+     if not username_length:
         conn.close()
         return
+    
+     username_length=int(username_length)
+     username=conn.recv(username_length).decode(FORMAT)
+     
+     if username in banned_usernames:
+       message="You are banned from the server."
+       sendMessage(conn,message)
+       conn.close()
+       return
       
     #checks if username is an admin
-      elif username=="admin": 
-        rawdata=conn.recv(HEADER).strip()       
-       
-        if not rawdata:
-         connected=False
-         if username in clients:
-             del clients[username]
-         if conn in admins:
-            admins.remove(conn)  
-         print(f"[Client {username}] disconnected")
-         broadcast(f" 🔴 {username} left the chat. ",username)
-         break
-        password_length=int(rawdata.decode(FORMAT))
-        password=conn.recv(password_length).decode(FORMAT)
-         
-        if password=="notanadminpassword":
-          message="Welcome Admin!"
-          sendMessage(conn,message)
-          clients["admin"] = conn 
-          admins.append(conn)
-          break
-
-        else :
-         message="Wrong password"
-         sendMessage(conn,message)
-         conn.close()
-         return 
+     elif username=="admin": 
+       rawdata=conn.recv(HEADER).strip()       
       
-     #checks if username is an moderator
-      elif username=="moderator": 
-        rawdata=conn.recv(HEADER).strip()       
-       
-        if not rawdata:
-         connected=False
-         if username in clients:
-             del clients[username]
-         if conn in moderators:
-            moderators.remove(conn)  
-         print(f"[Client {username}] disconnected")
-         broadcast(f" 🔴 {username} left the chat. ",username)
-         break
-        password_length=int(rawdata.decode(FORMAT))
-        password=conn.recv(password_length).decode(FORMAT)
-         
-        if password=="modpassword":
-          message="Welcome Moderator!"
-          sendMessage(conn,message)
-          clients[username] = conn 
-          moderators.append(conn)
-          break
-
-        else :
-         message="Wrong password"
+       if not rawdata:
+        connected=False
+        if username in clients:
+            del clients[username]
+        if conn in admins:
+           admins.remove(conn)  
+        print(f"[Client {username}] disconnected")
+        broadcast(f" 🔴 {username} left the chat. ",username)
+        break
+       password_length=int(rawdata.decode(FORMAT))
+       password=conn.recv(password_length).decode(FORMAT)
+        
+       if password=="notanadminpassword":
+         message="Welcome Admin!"
          sendMessage(conn,message)
-         conn.close()
-         return 
+         clients["admin"] = conn 
+         admins.append(conn)
+         break
+
+       else :
+        message="Wrong password"
+        sendMessage(conn,message)
+        conn.close()
+        return 
+     
+    #checks if username is an moderator
+     elif username=="moderator": 
+       rawdata=conn.recv(HEADER).strip()       
+      
+       if not rawdata:
+        connected=False
+        if username in clients:
+            del clients[username]
+        if conn in moderators:
+           moderators.remove(conn)  
+        print(f"[Client {username}] disconnected")
+        broadcast(f" 🔴 {username} left the chat. ",username)
+        break
+       password_length=int(rawdata.decode(FORMAT))
+       password=conn.recv(password_length).decode(FORMAT)
+        
+       if password=="modpassword":
+         message="Welcome Moderator!"
+         sendMessage(conn,message)
+         clients[username] = conn 
+         moderators.append(conn)
+         break
+
+       else :
+        message="Wrong password"
+        sendMessage(conn,message)
+        conn.close()
+        return 
         
 
-      elif username in clients:
+     elif username in clients:
        message="[SERVER] Username already exists. Please enter another username."
        sendMessage(conn,message)
       
-      else:
-       message=f"[SERVER] Username accepted. Welcome! {username}"
-       sendMessage(conn,message)
-       clients[username]=conn
-       break
-   
+     else:
+      message=f"[SERVER] Username accepted. Welcome! {username}"
+      sendMessage(conn,message)
+      clients[username]=conn
+      break
+  
 
    #Informing  other users when someone joins or leaves the chat
     print(f"[NEW-CONNECTION] {username} connected")
@@ -353,23 +381,23 @@ def handleClient(conn,addr):
         broadcast(f" 🔴 {username} left the chat. ",username)
         break 
       print(f"{addr}[{username}]{msg}")
-      if msg.startswith("/msg ") in msg:
+      if msg.startswith("/msg "):
        msgPrivately(msg,username)
-      elif msg.startswith("/users ") in msg:
+      elif msg.startswith("/users "):
        listallusers(conn) 
-      elif msg.startswith("/vote ") in msg:
+      elif msg.startswith("/vote "):
         checkVoteforKick(msg,conn,username)
-      elif msg.startswith("/changename ") in msg:
+      elif msg.startswith("/changename "):
         username=changeUsername(msg,conn,username)
-      elif msg.startswith("/ban ") in msg and conn in admins:
+      elif msg.startswith("/ban ") and conn in admins:
         print("trying to ban")
         handleBan(msg,conn)
-      elif msg.startswith("/kick ") in msg and (conn in admins or conn in moderators):
+      elif msg.startswith("/kick ") and (conn in admins or conn in moderators):
         print("trying to kick")
         handleKickByAdminandMod(msg,conn)
-      elif msg.startswith("/mute ") in msg and conn in moderators:
+      elif msg.startswith("/mute ")  and conn in moderators:
         handleMute(msg,conn)
-      elif msg.startswith("/warn ") in msg and conn in moderators:
+      elif msg.startswith("/warn ") and conn in moderators:
         handleWarn(msg,conn)
       else:
        msg=f"[{username}] {msg}"
