@@ -1,16 +1,18 @@
 #importing modules
 import socket
 import threading
+import rsa
 
 #defining constants
 HEADER=1024
 PORT=5050
 FORMAT="utf-8"
-SERVER="127.0.1.1"
+SERVER=socket.gethostbyname(socket.gethostname())
 ADDR=(SERVER,PORT)
 DISCONNECT_MESSAGE="/quit"
 stop_thread=False
 sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+public_key,private_key=rsa.newkeys(1024)
 public_partner=None
 sock.connect(ADDR)
 
