@@ -29,11 +29,13 @@ Roles are authenticated via passwords:
 - Python 3.6+
 - [`emoji`](https://pypi.org/project/emoji/) — Emoji parsing and rendering
 - [`rsa`](https://pypi.org/project/rsa/) — For encrypted messaging
+- [`python-dotenv`](  https://pypi.org/project/python-dotenv/) — Read key‑value pairs from a `.env` file into environment variables  
+- [`cryptography`](  https://pypi.org/project/cryptography/) — Provides cryptographic recipes and primitives (e.g. RSA, AES)  
 
 ### ✅ Install dependencies:
 
 ```bash
-pip install emoji rsa
+pip install emoji rsa python-dotenv cryptography
 ```
 
 🖥️ Run the Server
