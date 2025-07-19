@@ -67,15 +67,34 @@ Type aliases in your messages (e.g., `:fire:`) and they’ll automatically be co
 | `:clap:`      | 👏    | `:fire:`       | 🔥    |
 
 
-## 🔐 Planned Enhancements
+## 🔐 Current Features
 
 - ✅ Unique username enforcement  
 - ✅ LAN-based real-time chat  
 - ✅ Emoji support  
 - ✅ RSA-based encryption support  
-- 🔒 End-to-end encryption *(WIP)*  
-- 🧾 Reporting and audit logs *(WIP)*  
-- 📨 Cross-subnet connectivity *(WIP)*
+- ✅  End-to-end encryption *(WIP)*  
+
+## 🚀 Extra Enhancements
+
+- 🎨 **Light/Dark Mode Toggle**  
+  Let users switch between light and dark themes on demand via a `/theme` command.  
+
+- ⌛ **Typing Indicator**  
+  Show “<username> is typing…” when someone starts composing a message—just hook into the client’s input events and broadcast a small “TYPING” packet.  
+
+- 🔄 **Message History Replay**  
+  Cache the last 20 messages server‑side and replay them to any newly connected client for context.  
+
+- 📌 **Pinned Messages**  
+  Allow admins to pin important messages with `/pin <msgID>` so they always appear at the top of the chat window.  
+
+- 🚫 **Simple Profanity Filter**  
+  Auto‑asterisk or block a short list of banned words using a quick regex before broadcasting.  
+
+- 👍👎 **Reactions**  
+  Let users react with emoji to messages (e.g. `/react <msgID> 👍`) and broadcast updated reaction counts.  
+
 
 ## 👥 Made By
 
