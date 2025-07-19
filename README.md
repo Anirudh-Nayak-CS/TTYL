@@ -75,7 +75,7 @@ Type aliases in your messages (e.g., `:fire:`) and they’ll automatically be co
 - ✅ RSA-based encryption support  
 - ✅  End-to-end encryption *(WIP)*  
 
-## 🚀 Extra Enhancements
+## 🚀 Future Enhancements
 
 - 🎨 **Light/Dark Mode Toggle**  
   Let users switch between light and dark themes on demand via a `/theme` command.  
