@@ -1,1 +1,4 @@
 rsa=4.9.1
+cryptography=45.0.5
+emoji=2.14.1
+python-dotenv=1.1.1
