@@ -73,7 +73,7 @@ Type aliases in your messages (e.g., `:fire:`) and they’ll automatically be co
 - ✅ LAN-based real-time chat  
 - ✅ Emoji support  
 - ✅ RSA-based encryption support  
-- ✅  End-to-end encryption *(WIP)*  
+- ✅  End-to-end encryption 
 
 ## 🚀 Future Enhancements
 
